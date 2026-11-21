@@ -40,14 +40,17 @@ Use `tools\build.cmd dev` for a build that writes a log to `%APPDATA%\openchange
 
 ## Use
 
-1. Start CS2 with the launch option `-insecure`.
-2. Run `larpchanger_inject.exe` (keep it next to `larpchanger.dll`).
-3. Open the new tab in the main menu, pick your items, then start a match with bots.
+1. Download `LarpChanger.exe` from [Releases](../../releases).
+2. Start CS2 with the launch option `-insecure`.
+3. Open `LarpChanger.exe` and press **Load into CS2**. It unpacks itself to `%LOCALAPPDATA%\LarpChanger`.
+4. Open the Star of David tab in the main menu, pick your items, then start a match with bots.
+
+Building from source also gives you `larpchanger_inject.exe`, a console loader that does the same thing.
 
 ## Credits
 
 LarpChanger is a fork of [OpenChanger](https://github.com/realmaximg/OpenChanger) by realmaximg, used under the MIT License.
-Third-party libraries keep their own licenses; see `thirdparty/` and `thirdparty/NOTICES.md`.
+The installer uses [Dear ImGui](https://github.com/ocornut/imgui) (MIT). Third-party libraries keep their own licenses; see `thirdparty/` and `thirdparty/NOTICES.md`.
 
 ## License
 

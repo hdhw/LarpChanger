@@ -1,6 +1,5 @@
 import { createSignal } from 'solid-js';
 import { guarded } from '../bridge/log';
-import { iconPath } from '../design/icons';
 import { t } from '../i18n';
 import { back } from './pages';
 
@@ -32,16 +31,40 @@ function hideWhenFaded(tab: Panel) {
   };
 }
 
+// Star of David from six bars: [centre x, centre y, angle] of each triangle edge in a 26px box.
+const starEdges = [
+  [13, 19, 0],
+  [7.8, 10, -60],
+  [18.2, 10, 60],
+  [13, 7, 0],
+  [7.8, 16, 60],
+  [18.2, 16, -60],
+] as const;
+const edgeLength = 20.8;
+
+function createStar(button: GenericPanel) {
+  const box = $.CreatePanel('Panel', button, '', { class: 'mainmenu-top-navbar__radio-btn__icon' });
+  box.style.width = '26px';
+  box.style.height = '26px';
+  box.hittest = false;
+  for (const [x, y, angle] of starEdges) {
+    const edge = $.CreatePanel('Panel', box, '');
+    edge.hittest = false;
+    edge.style.width = `${edgeLength}px`;
+    edge.style.height = '2px';
+    edge.style.backgroundColor = '#ffffff';
+    edge.style.position = `${x - edgeLength / 2}px ${y - 1}px 0px`;
+    edge.style.transform = `rotateZ(${angle}deg)`;
+  }
+}
+
 function createButton(tab: Panel, settings: GenericPanel) {
   const bar = settings.GetParent() as Panel;
   const button = $.CreatePanel('RadioButton', bar, '', {
     class: 'mainmenu-top-navbar__radio-iconbtn',
     group: 'NavBar',
   });
-  $.CreatePanel('Image', button, '', {
-    class: 'mainmenu-top-navbar__radio-btn__icon',
-    src: iconPath('ui/colorpicker'),
-  });
+  createStar(button);
   const events = {
     onactivate: () => MainMenu.NavigateToTab(tab.id, ''),
     onmouseover: () => UiToolkitAPI.ShowTextTooltipOnPanel(button, t.appName),

@@ -85,8 +85,31 @@ target_link_libraries(openchanger PRIVATE oc_objects shell32)
 set_target_properties(openchanger PROPERTIES OUTPUT_NAME larpchanger)
 
 add_executable(oc_inject tools/inject.cpp)
-target_link_libraries(oc_inject PRIVATE oc_options)
+target_link_libraries(oc_inject PRIVATE oc_options winmm)
+add_custom_command(TARGET oc_inject POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/assets/sounds" "$<TARGET_FILE_DIR:oc_inject>/sounds")
 set_target_properties(oc_inject PROPERTIES OUTPUT_NAME larpchanger_inject)
+
+set(OC_IMGUI "${CMAKE_SOURCE_DIR}/thirdparty/imgui")
+add_library(imgui STATIC
+    ${OC_IMGUI}/imgui.cpp ${OC_IMGUI}/imgui_draw.cpp ${OC_IMGUI}/imgui_tables.cpp
+    ${OC_IMGUI}/imgui_widgets.cpp ${OC_IMGUI}/backends/imgui_impl_win32.cpp
+    ${OC_IMGUI}/backends/imgui_impl_dx11.cpp)
+target_include_directories(imgui PUBLIC ${OC_IMGUI} ${OC_IMGUI}/backends)
+
+set(OC_INSTALLER_RC "${CMAKE_BINARY_DIR}/installer.rc")
+file(GENERATE OUTPUT "${OC_INSTALLER_RC}" CONTENT
+"1 ICON \"${CMAKE_SOURCE_DIR}/docs/logo.ico\"
+101 RCDATA \"$<TARGET_FILE:openchanger>\"
+102 RCDATA \"${CMAKE_SOURCE_DIR}/assets/sounds/Welcome.mp3\"
+103 RCDATA \"${CMAKE_SOURCE_DIR}/assets/sounds/WelcomeBack.mp3\"
+")
+add_executable(larp_installer WIN32 tools/installer.cpp "${OC_INSTALLER_RC}")
+set_source_files_properties("${OC_INSTALLER_RC}" PROPERTIES OBJECT_DEPENDS "${CMAKE_BINARY_DIR}/larpchanger.dll")
+add_dependencies(larp_installer openchanger)
+target_link_libraries(larp_installer PRIVATE imgui d3d11 dxgi dwmapi winmm)
+target_compile_definitions(larp_installer PRIVATE UNICODE _UNICODE)
+set_target_properties(larp_installer PROPERTIES OUTPUT_NAME LarpChanger)
 
 set(OC_UI_DIST "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/panorama/dist")
 if(OPENCHANGER_DEV)
