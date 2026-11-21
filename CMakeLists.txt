@@ -107,8 +107,8 @@ file(GENERATE OUTPUT "${OC_INSTALLER_RC}" CONTENT
 add_executable(larp_installer WIN32 tools/installer.cpp "${OC_INSTALLER_RC}")
 set_source_files_properties("${OC_INSTALLER_RC}" PROPERTIES OBJECT_DEPENDS "${CMAKE_BINARY_DIR}/larpchanger.dll")
 add_dependencies(larp_installer openchanger)
-target_link_libraries(larp_installer PRIVATE imgui d3d11 dxgi dwmapi winmm)
-target_compile_definitions(larp_installer PRIVATE UNICODE _UNICODE)
+target_link_libraries(larp_installer PRIVATE imgui d3d11 dxgi dwmapi winmm winhttp)
+target_compile_definitions(larp_installer PRIVATE UNICODE _UNICODE NOMINMAX LARP_VERSION="1.1.0")
 set_target_properties(larp_installer PROPERTIES OUTPUT_NAME LarpChanger)
 
 set(OC_UI_DIST "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/panorama/dist")
