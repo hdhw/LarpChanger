@@ -1,0 +1,38 @@
+.layout {
+  width: 100%;
+  flow-children: right;
+}
+
+.slots {
+  margin: 0px 14px 12px 0px;
+  flow-children: right-wrap;
+}
+
+.detail {
+  width: fill-parent-flow(1);
+  flow-children: down;
+}
+
+.head {
+  width: 100%;
+  margin-bottom: 10px;
+  flow-children: right;
+}
+
+.replace {
+  margin-right: 6px;
+  vertical-align: center;
+}
+
+.buttons {
+  flow-children: right;
+}
+
+.extra {
+  margin-left: 8px;
+  vertical-align: center;
+}
+
+.sticker .detail {
+  min-height: 160px;
+}

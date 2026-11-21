@@ -1,0 +1,5 @@
+build/
+*.log
+node_modules/
+src/ui/panorama/dist/
+src/ui/panorama/generated/
