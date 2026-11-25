@@ -8,7 +8,7 @@
 #include <string_view>
 
 #define PtWeaponNameRemap                                                      \
-  "4C 8B 05 * * * * 48 85 C0 4C 0F 45 E8 49 8B C5 4D 2B C5"
+  "4C 8B 05 * * * * 48 85 C0 4C 0F 45 E0 49 8B C4 4D 2B C4"
 
 struct DeathNoticeWeaponName_t {
   const char *m_pszEventName;
