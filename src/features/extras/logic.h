@@ -82,7 +82,7 @@ constexpr std::size_t streakSound(std::size_t Kill, std::size_t Count) {
   if (Count <= 1 || Kill <= 1) {
     return 0;
   }
-  return (Kill < Count ? Kill : Count) - 1;
+  return (Kill - 1) % Count;
 }
 
 constexpr std::string tagFrame(std::string_view Text, TagMode Mode,
@@ -111,7 +111,10 @@ constexpr std::string tagFrame(std::string_view Text, TagMode Mode,
 
 static_assert(streakSound(1, 5) == 0);
 static_assert(streakSound(5, 5) == 4);
-static_assert(streakSound(9, 5) == 4);
+static_assert(streakSound(6, 5) == 0);
+static_assert(streakSound(9, 5) == 3);
+static_assert(streakSound(10, 5) == 4);
+static_assert(streakSound(11, 5) == 0);
 static_assert(streakSound(3, 1) == 0);
 static_assert(streakSound(0, 5) == 0);
 
