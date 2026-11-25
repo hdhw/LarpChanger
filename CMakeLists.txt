@@ -82,7 +82,8 @@ add_library(oc_objects OBJECT
 target_link_libraries(oc_objects PUBLIC oc_core libhat safetyhook)
 
 add_library(openchanger SHARED src/app/dllmain.cpp)
-target_link_libraries(openchanger PRIVATE oc_objects shell32)
+target_link_libraries(openchanger PRIVATE oc_objects shell32 delayimp)
+target_link_options(openchanger PRIVATE /DELAYLOAD:mfplat.dll /DELAYLOAD:mfreadwrite.dll)
 set_target_properties(openchanger PROPERTIES OUTPUT_NAME larpchanger)
 
 add_executable(oc_inject tools/inject.cpp)

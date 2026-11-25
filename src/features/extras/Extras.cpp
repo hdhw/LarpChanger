@@ -14,7 +14,6 @@
 #include <shellapi.h>
 
 #include <algorithm>
-#include <cctype>
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -27,13 +26,23 @@ namespace oc::extras {
 
 namespace {
 
-constexpr std::size_t MaxTag = 12;
 constexpr std::uint64_t BaseStepMs = 150;
 
 bool isAudio(const std::filesystem::path &File) {
   std::wstring Extension = File.extension().wstring();
   std::ranges::transform(Extension, Extension.begin(), ::towlower);
   return Extension == L".mp3" || Extension == L".wav";
+}
+
+// Exceptions are off in this DLL, so only the error_code filesystem overloads are safe here.
+template <class Visit>
+void forEachEntry(const std::filesystem::path &Folder, Visit &&Each) {
+  std::error_code Error;
+  std::filesystem::directory_iterator It(Folder, Error);
+  for (const std::filesystem::directory_iterator End; !Error && It != End;
+       It.increment(Error)) {
+    Each(*It);
+  }
 }
 
 std::filesystem::path packPath(const std::string &Name) {
@@ -70,7 +79,7 @@ std::filesystem::path Extras::soundFolder() {
 bool Extras::start() {
   std::error_code Error;
   std::filesystem::create_directories(soundFolder(), Error);
-  Now = loadSettings<Settings>(*this);
+  Now = sanitized(loadSettings<Settings>(*this));
   Audio = std::jthread([this](const std::stop_token &Stop) { audioLoop(Stop); });
   loadPack();
   OC_LOG("extras", "start: pack '{}' ({} files), tag '{}'", Now.Pack,
@@ -98,14 +107,13 @@ void Extras::stop() {
 
 std::vector<std::string> Extras::packs() {
   std::vector<std::string> Names;
-  std::error_code Error;
-  for (const auto &Entry :
-       std::filesystem::directory_iterator(soundFolder(), Error)) {
-    if (Entry.is_directory()) {
+  forEachEntry(soundFolder(), [&](const auto &Entry) {
+    std::error_code Error;
+    if (Entry.is_directory(Error)) {
       const std::u8string Name = Entry.path().filename().u8string();
       Names.emplace_back(Name.begin(), Name.end());
     }
-  }
+  });
   std::ranges::sort(Names);
   return Names;
 }
@@ -116,20 +124,14 @@ void Extras::loadPack() {
   if (Now.Pack.empty()) {
     return;
   }
-  std::error_code Error;
   std::vector<std::pair<int, std::filesystem::path>> Found;
-  for (const auto &Entry : std::filesystem::directory_iterator(
-           soundFolder() / packPath(Now.Pack), Error)) {
-    if (!Entry.is_regular_file() || !isAudio(Entry.path())) {
-      continue;
+  forEachEntry(soundFolder() / packPath(Now.Pack), [&](const auto &Entry) {
+    std::error_code Error;
+    if (Entry.is_regular_file(Error) && isAudio(Entry.path())) {
+      Found.emplace_back(packOrder(Entry.path().stem().native()),
+                         Entry.path());
     }
-    const std::string Stem = Entry.path().stem().string();
-    const bool Numbered =
-        !Stem.empty() && std::ranges::all_of(Stem, [](unsigned char C) {
-          return std::isdigit(C) != 0;
-        });
-    Found.emplace_back(Numbered ? std::stoi(Stem) : 0, Entry.path());
-  }
+  });
   std::ranges::sort(Found);
   for (auto &[Order, File] : Found) {
     Files.push_back(std::move(File));
@@ -138,7 +140,8 @@ void Extras::loadPack() {
     stopSound();
     Sounds.clear();
     for (const std::filesystem::path &Path : Paths) {
-      Sounds.push_back(decodeToWav(Path, Volume));
+      Sounds.push_back(Decoding ? decodeToWav(Path, Volume)
+                                : std::vector<std::byte>());
     }
     OC_LOG("extras", "decoded {} sounds", Sounds.size());
   });
@@ -167,7 +170,10 @@ void Extras::post(std::function<void()> Job) {
 // Decoding takes ~1s per pack, so it and the buffers PlaySound reads live on this thread.
 void Extras::audioLoop(const std::stop_token &Stop) {
   CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-  MFStartup(MF_VERSION, MFSTARTUP_LITE);
+  // Media Foundation is delay-loaded: Windows N without the Media Feature Pack has no mfplat.dll.
+  Decoding = LoadLibraryW(L"mfplat.dll") != nullptr &&
+             LoadLibraryW(L"mfreadwrite.dll") != nullptr &&
+             SUCCEEDED(MFStartup(MF_VERSION, MFSTARTUP_LITE));
   for (;;) {
     std::function<void()> Job;
     {
@@ -181,13 +187,16 @@ void Extras::audioLoop(const std::stop_token &Stop) {
     }
     Job();
   }
-  MFShutdown();
+  if (Decoding) {
+    MFShutdown();
+  }
   CoUninitialize();
 }
 
 void Extras::setSound(std::string Pack, int Volume) {
   Now.Pack = std::move(Pack);
-  Now.Volume = std::clamp(Volume, 0, 100);
+  Now.Volume = Volume;
+  Now = sanitized(std::move(Now));
   loadPack();
   saveSettings(*this, Now);
 }
@@ -200,13 +209,11 @@ void Extras::onKill() {
 }
 
 void Extras::setTag(std::string Text, TagMode Mode, int Speed, bool On) {
-  if (Text.size() > MaxTag) {
-    Text.resize(MaxTag);
-  }
   Now.Tag = std::move(Text);
   Now.Mode = Mode;
-  Now.Speed = std::clamp(Speed, 1, 100);
+  Now.Speed = Speed;
   Now.TagOn = On;
+  Now = sanitized(std::move(Now));
   saveSettings(*this, Now);
 }
 

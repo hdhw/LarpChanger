@@ -16,15 +16,6 @@
 
 namespace oc::extras {
 
-struct Settings {
-  std::string Pack;
-  int Volume = 80;
-  std::string Tag;
-  TagMode Mode = TagMode::Static;
-  int Speed = 50;
-  bool TagOn = false;
-};
-
 class Extras final : public Feature {
 public:
   static Extras &get();
@@ -62,6 +53,7 @@ private:
   std::condition_variable_any Wake;
   std::deque<std::function<void()>> Jobs;
   std::vector<std::vector<std::byte>> Sounds;
+  bool Decoding = false;
   std::jthread Audio;
 };
 
