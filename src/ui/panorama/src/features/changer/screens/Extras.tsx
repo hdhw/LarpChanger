@@ -1,0 +1,110 @@
+import { createSignal, Show } from 'solid-js';
+import type { TagMode } from '../../../../generated/api';
+import { ActionButton } from '../../../components/ActionButton/ActionButton';
+import { DropButton } from '../../../components/DropButton/DropButton';
+import { FieldLabel } from '../../../components/FieldLabel/FieldLabel';
+import { Segmented } from '../../../components/Segmented/Segmented';
+import { SliderField } from '../../../components/SliderField/SliderField';
+import { TextField } from '../../../components/TextField/TextField';
+import { t } from '../../../i18n';
+import css from './Extras.module.css';
+
+const api = OpenChangerAPI.extras;
+
+const modes: { value: TagMode; label: string }[] = [
+  { value: 'static', label: t.tagStatic },
+  { value: 'scroll', label: t.tagScroll },
+  { value: 'type', label: t.tagType },
+  { value: 'blink', label: t.tagBlink },
+];
+
+type RangeProps = { value: number; min: number; onChange: (value: number) => void; onRelease: (value: number) => void };
+
+function Range(props: RangeProps) {
+  return (
+    <Panel class={css.ruler}>
+      <Panel class={css.track} hittest={false} />
+      <SliderField
+        value={props.value}
+        min={props.min}
+        max={100}
+        step={1}
+        onChange={props.onChange}
+        onRelease={props.onRelease}
+      />
+    </Panel>
+  );
+}
+
+export function Extras() {
+  const saved = api.settings();
+  const [packs, setPacks] = createSignal(api.packs());
+  const [pack, setPack] = createSignal(packs().includes(saved.Pack) ? saved.Pack : '');
+  const [volume, setVolume] = createSignal(saved.Volume);
+  const [tag, setTag] = createSignal(saved.Tag);
+  const [mode, setMode] = createSignal<TagMode>(saved.Mode);
+  const [speed, setSpeed] = createSignal(saved.Speed);
+  const [tagOn, setTagOn] = createSignal(saved.TagOn);
+
+  const saveSound = () => api.setSound(pack(), volume());
+  const saveTag = () => api.setTag(tag(), mode(), speed(), tagOn());
+  const sound =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      set(value);
+      saveSound();
+    };
+  const tagged =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      set(value);
+      saveTag();
+    };
+
+  const packItems = () => {
+    setPacks(api.packs());
+    return [
+      { label: t.off, current: pack() === '', on: () => sound(setPack)('') },
+      ...packs().map((name) => ({
+        label: name,
+        current: pack() === name,
+        on: () => sound(setPack)(name),
+      })),
+    ];
+  };
+
+  return (
+    <Panel class={css.page}>
+      <Label class={css.heading} text={t.killSound} />
+      <Panel class={css.row}>
+        <DropButton fill class={css.grow} value={pack() || t.off} active={pack() !== ''} items={packItems} />
+        <ActionButton label={t.preview} small enabled={pack() !== ''} onPress={() => api.previewSound()} />
+        <ActionButton label={t.openFolder} variant="ghost" small onPress={() => api.openFolder()} />
+      </Panel>
+      <FieldLabel text={t.volume} />
+      <Range value={volume()} min={0} onChange={setVolume} onRelease={sound(setVolume)} />
+      <Label class={css.hint} text={t.killSoundHint} />
+
+      <Label class={css.heading} text={t.clanTag} />
+      <Panel class={css.row}>
+        <Segmented
+          options={[
+            { value: 'off', label: t.off },
+            { value: 'on', label: t.tagOn },
+          ]}
+          value={tagOn() ? 'on' : 'off'}
+          onChange={(value) => tagged(setTagOn)(value === 'on')}
+        />
+      </Panel>
+      <FieldLabel text={t.tagText} />
+      <TextField value={tag()} maxchars={12} placeholder="LARP" onChange={tagged(setTag)} />
+      <Panel class={css.row}>
+        <Segmented options={modes} value={mode()} onChange={tagged(setMode)} />
+      </Panel>
+      <Show when={mode() !== 'static'}>
+        <FieldLabel text={t.speed} />
+        <Range value={speed()} min={1} onChange={setSpeed} onRelease={tagged(setSpeed)} />
+      </Show>
+    </Panel>
+  );
+}

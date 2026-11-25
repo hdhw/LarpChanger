@@ -15,7 +15,7 @@ import {
 import * as game from './game';
 import { favorites } from './store';
 
-type Mode = 'catalog' | 'mine' | 'kits';
+type Mode = 'catalog' | 'mine' | 'kits' | 'extras';
 export type SortField = 'name' | 'rarity' | 'type' | 'collection';
 type Sort = { field: SortField; descending: boolean };
 export type Facet<Value> = { value: Value; name: string; count: number };

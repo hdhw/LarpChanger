@@ -11,4 +11,8 @@ public:
   SDK_EXPORT(Tier0, IMemAlloc, "g_pMemAlloc");
 
   PATTERN_VIRTUAL(Client, void(void *), Free, PtFree);
+
+  SDK_EXPORT_FUNCTION(Tier0, char *(const char *), StrDup,
+                      "MemAlloc_StrDupFunc");
+  SDK_EXPORT_FUNCTION(Tier0, void(void *), FreeBlock, "MemAlloc_FreeFunc");
 };

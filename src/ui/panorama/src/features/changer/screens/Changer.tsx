@@ -11,6 +11,7 @@ import { CatalogView } from './browser/CatalogView';
 import { KitsView } from './browser/KitsView';
 import { MineView } from './browser/MineView';
 import css from './Changer.module.css';
+import { Extras } from './Extras';
 import { Header } from './Header';
 import { Work } from './workspace/Work';
 
@@ -41,6 +42,11 @@ export function Changer() {
               <Match when={mode() === 'mine'}>
                 <Presence motion="appear">
                   <MineView />
+                </Presence>
+              </Match>
+              <Match when={mode() === 'extras'}>
+                <Presence motion="appear">
+                  <Extras />
                 </Presence>
               </Match>
               <Match when={mode() === 'kits'}>

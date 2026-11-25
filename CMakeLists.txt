@@ -76,6 +76,7 @@ add_library(oc_objects OBJECT
     src/sdk/scenefilecache/CResponseSystem.cpp
     src/sdk/tier0/CAtomicMutex.cpp
     src/ui/changer/methods.cpp
+    src/ui/extras/methods.cpp
     src/ui/ui.cpp
 )
 target_link_libraries(oc_objects PUBLIC oc_core libhat safetyhook)
@@ -140,3 +141,4 @@ else()
 endif()
 
 add_subdirectory(src/features/changer)
+add_subdirectory(src/features/extras)

@@ -35,6 +35,7 @@ export function Header() {
         )}
       </For>
       <HeaderTab label={t.mine} active={mode() === 'mine'} onPress={() => setMode('mine')} />
+      <HeaderTab label={t.extras} active={mode() === 'extras'} onPress={() => setMode('extras')} />
     </Panel>
   );
 }
