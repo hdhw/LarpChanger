@@ -25,6 +25,8 @@ constexpr int Height = 380;
 constexpr int DllResource = 101;
 constexpr int WelcomeResource = 102;
 constexpr int WelcomeBackResource = 103;
+constexpr int PingResource = 110;
+constexpr int RisingResource = 111;
 constexpr float Pi = 3.14159265f;
 constexpr ImVec2 StarCentre{Width * 0.5f, 92.0f};
 constexpr float StarRadius = 36.0f;
@@ -93,6 +95,31 @@ bool writeResource(int Id, const std::wstring &Path) {
   return Ok && Written == Size;
 }
 
+// Starter packs go next to the user's own packs; files they already have are never overwritten.
+void installKillSounds() {
+  const wchar_t *const Roaming = _wgetenv(L"APPDATA");
+  if (Roaming == nullptr) {
+    return;
+  }
+  const std::wstring Packs = std::wstring(Roaming) + L"\\openchanger\\killsounds";
+  CreateDirectoryW((std::wstring(Roaming) + L"\\openchanger").c_str(), nullptr);
+  CreateDirectoryW(Packs.c_str(), nullptr);
+  CreateDirectoryW((Packs + L"\\Ping").c_str(), nullptr);
+  CreateDirectoryW((Packs + L"\\Rising").c_str(), nullptr);
+  const auto missing = [](const std::wstring &Path) {
+    return GetFileAttributesW(Path.c_str()) == INVALID_FILE_ATTRIBUTES;
+  };
+  if (missing(Packs + L"\\Ping\\ping.wav")) {
+    writeResource(PingResource, Packs + L"\\Ping\\ping.wav");
+  }
+  for (int Kill = 1; Kill <= 5; ++Kill) {
+    const std::wstring File = Packs + L"\\Rising\\" + std::to_wstring(Kill) + L".wav";
+    if (missing(File)) {
+      writeResource(RisingResource + Kill - 1, File);
+    }
+  }
+}
+
 // Unpacks the DLL and sounds into %LOCALAPPDATA%\LarpChanger. A DLL locked by a running CS2 is kept as is.
 bool install() {
   const wchar_t *const Local = _wgetenv(L"LOCALAPPDATA");
@@ -107,6 +134,7 @@ bool install() {
                      GetFileAttributesW(Dll.c_str()) != INVALID_FILE_ATTRIBUTES;
   writeResource(WelcomeResource, Folder + L"\\sounds\\Welcome.mp3");
   writeResource(WelcomeBackResource, Folder + L"\\sounds\\WelcomeBack.mp3");
+  installKillSounds();
   return DllOk;
 }
 

@@ -104,12 +104,18 @@ file(GENERATE OUTPUT "${OC_INSTALLER_RC}" CONTENT
 101 RCDATA \"$<TARGET_FILE:openchanger>\"
 102 RCDATA \"${CMAKE_SOURCE_DIR}/assets/sounds/Welcome.mp3\"
 103 RCDATA \"${CMAKE_SOURCE_DIR}/assets/sounds/WelcomeBack.mp3\"
+110 RCDATA \"${CMAKE_SOURCE_DIR}/assets/killsounds/Ping/ping.wav\"
+111 RCDATA \"${CMAKE_SOURCE_DIR}/assets/killsounds/Rising/1.wav\"
+112 RCDATA \"${CMAKE_SOURCE_DIR}/assets/killsounds/Rising/2.wav\"
+113 RCDATA \"${CMAKE_SOURCE_DIR}/assets/killsounds/Rising/3.wav\"
+114 RCDATA \"${CMAKE_SOURCE_DIR}/assets/killsounds/Rising/4.wav\"
+115 RCDATA \"${CMAKE_SOURCE_DIR}/assets/killsounds/Rising/5.wav\"
 ")
 add_executable(larp_installer WIN32 tools/installer.cpp "${OC_INSTALLER_RC}")
 set_source_files_properties("${OC_INSTALLER_RC}" PROPERTIES OBJECT_DEPENDS "${CMAKE_BINARY_DIR}/larpchanger.dll")
 add_dependencies(larp_installer openchanger)
 target_link_libraries(larp_installer PRIVATE imgui d3d11 dxgi dwmapi winmm winhttp)
-target_compile_definitions(larp_installer PRIVATE UNICODE _UNICODE NOMINMAX LARP_VERSION="1.1.2")
+target_compile_definitions(larp_installer PRIVATE UNICODE _UNICODE NOMINMAX LARP_VERSION="1.2.0")
 set_target_properties(larp_installer PROPERTIES OUTPUT_NAME LarpChanger)
 
 set(OC_UI_DIST "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/panorama/dist")
