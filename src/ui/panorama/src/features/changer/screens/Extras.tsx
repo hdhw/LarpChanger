@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, onCleanup, Show } from 'solid-js';
 import type { TagMode } from '../../../../generated/api';
 import { ActionButton } from '../../../components/ActionButton/ActionButton';
 import { DropButton } from '../../../components/DropButton/DropButton';
@@ -59,6 +59,11 @@ export function Extras() {
     api.setMvp(song(), mvpVolume(), title(), artist());
     setCover(api.mvpIcon());
   };
+  // Saving on every keystroke steals focus from the text box, so text fields save when you finish typing.
+  onCleanup(() => {
+    saveMvp();
+    saveTag();
+  });
   const mvp =
     <T,>(set: (value: T) => void) =>
     (value: T) => {
@@ -130,9 +135,9 @@ export function Extras() {
           </Panel>
           <Panel class={css.kitFields}>
             <FieldLabel text={t.mvpTitle} />
-            <TextField value={title()} maxchars={48} placeholder="Paparazzi" onChange={mvp(setTitle)} />
+            <TextField value={title()} maxchars={48} placeholder="Paparazzi" onChange={setTitle} onDone={saveMvp} />
             <FieldLabel text={t.mvpArtist} />
-            <TextField value={artist()} maxchars={48} placeholder="Lady Gaga" onChange={mvp(setArtist)} />
+            <TextField value={artist()} maxchars={48} placeholder="Lady Gaga" onChange={setArtist} onDone={saveMvp} />
             <Label class={css.hint} text={kitName(title(), artist())} />
           </Panel>
         </Panel>
@@ -151,7 +156,7 @@ export function Extras() {
         />
       </Panel>
       <FieldLabel text={t.tagText} />
-      <TextField value={tag()} maxchars={12} placeholder="LARP" onChange={tagged(setTag)} />
+      <TextField value={tag()} maxchars={12} placeholder="LARP" onChange={setTag} onDone={saveTag} />
       <Panel class={css.row}>
         <Segmented options={modes} value={mode()} onChange={tagged(setMode)} />
       </Panel>
