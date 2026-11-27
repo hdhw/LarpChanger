@@ -1,6 +1,7 @@
 #include "core/log.h"
 #include "features/changer/Changer.h"
 #include "features/changer/voice/voices.h"
+#include "features/extras/Extras.h"
 #include "game/hook.h"
 #include "sdk/client/CCSPlayerController.h"
 #include "sdk/client/CGameEntitySystem.h"
@@ -26,6 +27,10 @@ InlineHook<detour> Hook{client::DoStartSoundEventLink};
 std::uint64_t agentLine(std::uint64_t Hash, std::uint64_t Entity) {
   const Changer &Feature = Changer::get();
   const std::uint32_t Sound = CSoundOpSystem::soundEventOf(Hash);
+  if (extras::Extras::get().mutes(Sound)) {
+    // An unknown event plays nothing, which silences the kit's anthem under the custom MVP song.
+    return CSoundOpSystem::withSoundEvent(Hash, "LarpChanger.Silence");
+  }
   if (!Feature.voices().speaks(Sound)) {
     return Hash;
   }

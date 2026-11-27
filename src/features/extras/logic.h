@@ -17,9 +17,14 @@ struct Settings {
   TagMode Mode = TagMode::Static;
   int Speed = 50;
   bool TagOn = false;
+  std::string Mvp;
+  int MvpVolume = 80;
+  std::string MvpTitle;
+  std::string MvpArtist;
 };
 
 constexpr std::size_t MaxTag = 12;
+constexpr std::size_t MaxKitText = 48;
 
 constexpr std::vector<std::string_view> charsOf(std::string_view Text) {
   std::vector<std::string_view> Chars;
@@ -69,12 +74,15 @@ constexpr int clamped(int Value, int Low, int High) {
 
 constexpr Settings sanitized(Settings Value) {
   Value.Volume = clamped(Value.Volume, 0, 100);
+  Value.MvpVolume = clamped(Value.MvpVolume, 0, 100);
   Value.Speed = clamped(Value.Speed, 1, 100);
   if (static_cast<std::uint8_t>(Value.Mode) >
       static_cast<std::uint8_t>(TagMode::Blink)) {
     Value.Mode = TagMode::Static;
   }
   Value.Tag = truncateChars(Value.Tag, MaxTag);
+  Value.MvpTitle = truncateChars(Value.MvpTitle, MaxKitText);
+  Value.MvpArtist = truncateChars(Value.MvpArtist, MaxKitText);
   return Value;
 }
 

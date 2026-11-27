@@ -15,10 +15,20 @@ void onPlayerDeath(IGameEvent &Event) {
   }
 }
 
-void onRoundStart(IGameEvent &) { Extras::get().resetStreak(); }
+void onRoundStart(IGameEvent &) {
+  Extras::get().resetStreak();
+  Extras::get().stopMvp();
+}
+
+void onRoundMvp(IGameEvent &Event) {
+  if (Event.isLocalPlayer("userid")) {
+    Extras::get().onMvp();
+  }
+}
 
 GameEventHandler DeathHandler{"player_death", onPlayerDeath};
 GameEventHandler RoundHandler{"round_start", onRoundStart};
+GameEventHandler MvpHandler{"round_mvp", onRoundMvp};
 
 } // namespace
 

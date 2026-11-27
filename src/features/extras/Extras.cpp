@@ -2,8 +2,11 @@
 
 #include "core/log.h"
 #include "core/settings.h"
+#include "features/changer/Changer.h"
 #include "features/extras/decode.h"
+#include "game/panorama.h"
 #include "sdk/client/CCSPlayerController.h"
+#include "sdk/soundsystem/CSoundOpSystem.h"
 #include "sdk/tier0/IMemAlloc.h"
 
 #include <windows.h>
@@ -28,9 +31,14 @@ namespace {
 
 constexpr std::uint64_t BaseStepMs = 150;
 
-bool isAudio(const std::filesystem::path &File) {
+std::wstring extensionOf(const std::filesystem::path &File) {
   std::wstring Extension = File.extension().wstring();
   std::ranges::transform(Extension, Extension.begin(), ::towlower);
+  return Extension;
+}
+
+bool isAudio(const std::filesystem::path &File) {
+  const std::wstring Extension = extensionOf(File);
   return Extension == L".mp3" || Extension == L".wav";
 }
 
@@ -47,6 +55,11 @@ void forEachEntry(const std::filesystem::path &Folder, Visit &&Each) {
 
 std::filesystem::path packPath(const std::string &Name) {
   return {std::u8string(Name.begin(), Name.end())};
+}
+
+std::string utf8Name(const std::filesystem::path &Path) {
+  const std::u8string Name = Path.filename().u8string();
+  return {Name.begin(), Name.end()};
 }
 
 void stopSound() { PlaySoundW(nullptr, nullptr, 0); }
@@ -76,14 +89,18 @@ std::filesystem::path Extras::soundFolder() {
   return userDirectory() / L"killsounds";
 }
 
+std::filesystem::path Extras::mvpFolder() { return userDirectory() / L"mvp"; }
+
 bool Extras::start() {
   std::error_code Error;
   std::filesystem::create_directories(soundFolder(), Error);
+  std::filesystem::create_directories(mvpFolder(), Error);
   Now = sanitized(loadSettings<Settings>(*this));
   Audio = std::jthread([this](const std::stop_token &Stop) { audioLoop(Stop); });
   loadPack();
-  OC_LOG("extras", "start: pack '{}' ({} files), tag '{}'", Now.Pack,
-         Files.size(), Now.Tag);
+  loadMvp();
+  OC_LOG("extras", "start: pack '{}' ({} files), mvp '{}', tag '{}'",
+         Now.Pack, Files.size(), Now.Mvp, Now.Tag);
   return true;
 }
 
@@ -91,6 +108,7 @@ void Extras::stop() {
   post([this] {
     stopSound();
     Sounds.clear();
+    Song.clear();
   });
   Audio.request_stop();
   Wake.notify_all();
@@ -110,8 +128,7 @@ std::vector<std::string> Extras::packs() {
   forEachEntry(soundFolder(), [&](const auto &Entry) {
     std::error_code Error;
     if (Entry.is_directory(Error)) {
-      const std::u8string Name = Entry.path().filename().u8string();
-      Names.emplace_back(Name.begin(), Name.end());
+      Names.push_back(utf8Name(Entry.path()));
     }
   });
   std::ranges::sort(Names);
@@ -145,6 +162,99 @@ void Extras::loadPack() {
     }
     OC_LOG("extras", "decoded {} sounds", Sounds.size());
   });
+}
+
+std::vector<std::string> Extras::songs() {
+  std::vector<std::string> Names;
+  forEachEntry(mvpFolder(), [&](const auto &Entry) {
+    std::error_code Error;
+    if (Entry.is_regular_file(Error) && isAudio(Entry.path())) {
+      Names.push_back(utf8Name(Entry.path()));
+    }
+  });
+  std::ranges::sort(Names);
+  return Names;
+}
+
+void Extras::loadMvp() {
+  std::filesystem::path Path;
+  if (!Now.Mvp.empty()) {
+    Path = mvpFolder() / packPath(Now.Mvp);
+  }
+  post([this, Path = std::move(Path), Volume = Now.MvpVolume] {
+    stopSound();
+    Song = Decoding && !Path.empty() ? decodeToWav(Path, Volume)
+                                     : std::vector<std::byte>();
+    OC_LOG("extras", "mvp song decoded: {} bytes", Song.size());
+  });
+}
+
+void Extras::setMvp(std::string Name, int Volume, std::string Title,
+                    std::string Artist) {
+  const bool Reload = Name != Now.Mvp || Volume != Now.MvpVolume;
+  Now.Mvp = std::move(Name);
+  Now.MvpVolume = Volume;
+  Now.MvpTitle = std::move(Title);
+  Now.MvpArtist = std::move(Artist);
+  Now = sanitized(std::move(Now));
+  if (Reload) {
+    loadMvp();
+  }
+  saveSettings(*this, Now);
+}
+
+// The cover is any png/jpg in the mvp folder named like the song, e.g. paparazzi.png.
+std::string Extras::mvpIcon() const {
+  if (Now.Mvp.empty()) {
+    return {};
+  }
+  const std::filesystem::path Stem = packPath(Now.Mvp).stem();
+  std::string Url;
+  forEachEntry(mvpFolder(), [&](const auto &Entry) {
+    const std::wstring Extension = extensionOf(Entry.path());
+    if (Url.empty() && Entry.path().stem() == Stem &&
+        (Extension == L".png" || Extension == L".jpg" ||
+         Extension == L".jpeg")) {
+      const std::u8string Path = Entry.path().generic_u8string();
+      Url = "file://" + std::string(Path.begin(), Path.end());
+    }
+  });
+  return Url;
+}
+
+void Extras::playMvp() {
+  post([this] {
+    if (!Song.empty()) {
+      PlaySoundW(reinterpret_cast<LPCWSTR>(Song.data()), nullptr,
+                 SND_MEMORY | SND_ASYNC | SND_NODEFAULT);
+    }
+  });
+}
+
+void Extras::stopMvp() {
+  if (!Now.Mvp.empty()) {
+    post(stopSound);
+  }
+}
+
+void Extras::onMvp() {
+  if (Now.Mvp.empty()) {
+    return;
+  }
+  const auto &Kits = changer::Changer::get().catalog().MusicKits;
+  if (Anthems.size() != Kits.size() + 1) {
+    Anthems.assign(1, CSoundOpSystem::getSoundEventHash("Music.MVPAnthem"));
+    for (const changer::Kit &Kit : Kits) {
+      const std::string Name = "Music.MVPAnthem." + Kit.Name;
+      Anthems.push_back(CSoundOpSystem::getSoundEventHash(Name.c_str()));
+    }
+  }
+  playMvp();
+  notify("extras", "mvp");
+}
+
+bool Extras::mutes(std::uint32_t Sound) const {
+  return !Now.Mvp.empty() && std::ranges::contains(Anthems, Sound);
 }
 
 void Extras::play(std::size_t Index) {
@@ -236,10 +346,10 @@ void Extras::tick() {
   TagShown = true;
 }
 
-void Extras::openFolder() {
+void Extras::openFolder(const std::filesystem::path &Folder) {
   std::error_code Error;
-  std::filesystem::create_directories(soundFolder(), Error);
-  ShellExecuteW(nullptr, L"open", soundFolder().c_str(), nullptr, nullptr,
+  std::filesystem::create_directories(Folder, Error);
+  ShellExecuteW(nullptr, L"open", Folder.c_str(), nullptr, nullptr,
                 SW_SHOWNORMAL);
 }
 

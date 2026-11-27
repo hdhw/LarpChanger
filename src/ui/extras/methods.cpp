@@ -39,7 +39,21 @@ void setTag(std::string Text, extras::TagMode Mode, int Speed, bool On) {
 
 void tick() { Extras::get().tick(); }
 
-void openFolder() { Extras::openFolder(); }
+void openFolder() { Extras::openFolder(Extras::soundFolder()); }
+
+std::vector<std::string> songs() { return Extras::songs(); }
+
+void setMvp(std::string Song, int Volume, std::string Title,
+            std::string Artist) {
+  Extras::get().setMvp(std::move(Song), Volume, std::move(Title),
+                       std::move(Artist));
+}
+
+std::string mvpIcon() { return Extras::get().mvpIcon(); }
+
+void previewMvp() { Extras::get().playMvp(); }
+
+void openMvpFolder() { Extras::openFolder(Extras::mvpFolder()); }
 
 JsMethod<&packs> Packs{"extras", "packs"};
 JsMethod<&settings> Settings{"extras", "settings"};
@@ -48,6 +62,12 @@ JsMethod<&previewSound> PreviewSound{"extras", "previewSound"};
 JsMethod<&setTag> SetTag{"extras", "setTag", "text", "mode", "speed", "on"};
 JsMethod<&tick> Tick{"extras", "tick"};
 JsMethod<&openFolder> OpenFolder{"extras", "openFolder"};
+JsMethod<&songs> Songs{"extras", "songs"};
+JsMethod<&setMvp> SetMvp{"extras", "setMvp", "song", "volume", "title",
+                         "artist"};
+JsMethod<&mvpIcon> MvpIcon{"extras", "mvpIcon"};
+JsMethod<&previewMvp> PreviewMvp{"extras", "previewMvp"};
+JsMethod<&openMvpFolder> OpenMvpFolder{"extras", "openMvpFolder"};
 
 } // namespace
 
